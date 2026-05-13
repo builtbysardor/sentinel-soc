@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SentinelLog - Real-time Threat Detection System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #000000;
+            --bg-secondary: #0a0a0a;
+            --bg-tertiary: #111111;
+            --bg-card: #0f0f0f;
+            --text-primary: #ffffff;
+            --text-secondary: #888888;
+            --text-tertiary: #444444;
+            --accent-primary: #00ff88;
+            --accent-danger: #ff0055;
+            --accent-warning: #ffaa00;
+            --accent-info: #00aaff;
+            --border-color: #1a1a1a;
+            --border-accent: #222222;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(20px);
+        }
+
+        .header-content {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-primary), #00cc66);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
+        }
+
+        .logo-text h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .logo-text p {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-accent);
+            border-radius: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: var(--accent-primary);
+            box-shadow: 0 0 10px var(--accent-primary);
+        }
+
+        .status-dot.disconnected {
+            background: var(--accent-danger);
+            box-shadow: 0 0 10px var(--accent-danger);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .alert-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 0, 85, 0.1);
+            border: 1px solid rgba(255, 0, 85, 0.3);
+            border-radius: 8px;
+        }
+
+        .alert-count {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent-danger);
+        }
+
+        .btn {
+            padding: 0.625rem 1.25rem;
+            border: 1px solid var(--border-accent);
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--bg-card);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        .btn-primary {
+            background: var(--accent-primary);
+            color: #000;
+            border-color: var(--accent-primary);
+        }
+
+        .btn-primary:hover {
+            background: #00dd77;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .metric-card:hover {
+            border-color: var(--border-accent);
+            transform: translateY(-2px);
+        }
+
+        .metric-card:hover::before {
+            opacity: 1;
+        }
+
+        .metric-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value.success { color: var(--accent-primary); }
+        .metric-value.danger { color: var(--accent-danger); }
+        .metric-value.warning { color: var(--accent-warning); }
+        .metric-value.info { color: var(--accent-info); }
+
+        .metric-footer {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+        }
+
+        .filter-bar {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-accent);
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--text-tertiary);
+        }
+
+        .filter-btn.active {
+            background: var(--accent-primary);
+            color: #000;
+            border-color: var(--accent-primary);
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 2rem;
+        }
+
+        .log-panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .panel-title {
+            font-size: 1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .live-indicator {
+            width: 6px;
+            height: 6px;
+            background: var(--accent-danger);
+            border-radius: 50%;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.2; }
+        }
+
+        .log-count {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .log-container {
+            height: 700px;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .log-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .log-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .log-container::-webkit-scrollbar-thumb {
+            background: var(--border-accent);
+            border-radius: 3px;
+        }
+
+        .log-container::-webkit-scrollbar-thumb:hover {
+            background: var(--text-tertiary);
+        }
+
+        .log-entry {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-left: 3px solid var(--border-accent);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .log-entry:hover {
+            background: var(--bg-card);
+            border-color: var(--border-accent);
+            transform: translateX(4px);
+        }
+
+        .log-entry.critical {
+            border-left-color: var(--accent-danger);
+            background: rgba(255, 0, 85, 0.05);
+        }
+
+        .log-entry.warning {
+            border-left-color: var(--accent-warning);
+            background: rgba(255, 170, 0, 0.05);
+        }
+
+        .log-entry.info {
+            border-left-color: var(--accent-primary);
+            background: rgba(0, 255, 136, 0.05);
+        }
+
+        .log-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .log-time {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+        }
+
+        .ip-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-accent);
+            border-radius: 6px;
+            color: var(--accent-info);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .ip-badge:hover {
+            background: rgba(0, 170, 255, 0.1);
+            border-color: var(--accent-info);
+        }
+
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-critical {
+            background: rgba(255, 0, 85, 0.2);
+            color: var(--accent-danger);
+            border: 1px solid rgba(255, 0, 85, 0.3);
+        }
+
+        .badge-warning {
+            background: rgba(255, 170, 0, 0.2);
+            color: var(--accent-warning);
+            border: 1px solid rgba(255, 170, 0, 0.3);
+        }
+
+        .badge-info {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--accent-primary);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+
+        .badge-normal {
+            background: rgba(136, 136, 136, 0.2);
+            color: var(--text-secondary);
+            border: 1px solid rgba(136, 136, 136, 0.3);
+        }
+
+        .log-message {
+            font-size: 0.875rem;
+            line-height: 1.5;
+            margin-bottom: 0.5rem;
+        }
+
+        .log-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .threat-score {
+            font-size: 1.5rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .score-label {
+            font-size: 0.7rem;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+        }
+
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .chart-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+
+        .chart-title {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        .chart-container {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            height: 120px;
+            gap: 4px;
+        }
+
+        .chart-bar {
+            flex: 1;
+            background: linear-gradient(180deg, var(--accent-primary), rgba(0, 255, 136, 0.3));
+            border-radius: 4px 4px 0 0;
+            transition: all 0.3s;
+            cursor: pointer;
+            min-height: 4px;
+        }
+
+        .chart-bar:hover {
+            background: linear-gradient(180deg, #00ff88, var(--accent-primary));
+        }
+
+        .source-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .source-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .source-item:hover {
+            border-color: var(--border-accent);
+        }
+
+        .attack-stat {
+            margin-bottom: 1rem;
+        }
+
+        .attack-stat:last-child {
+            margin-bottom: 0;
+        }
+
+        .attack-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .attack-name {
+            font-size: 0.875rem;
+            color: var(--text-primary);
+        }
+
+        .attack-count {
+            font-weight: 700;
+            color: var(--accent-danger);
+        }
+
+        .attack-bar {
+            height: 6px;
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .attack-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-danger), var(--accent-warning));
+            transition: width 0.3s;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-accent);
+            border-radius: 12px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .close-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1.25rem;
+            transition: all 0.2s;
+        }
+
+        .close-btn:hover {
+            background: var(--accent-danger);
+            color: #fff;
+        }
+
+        .detail-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .detail-item {
+            background: var(--bg-tertiary);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .detail-label {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .detail-value {
+            font-size: 0.875rem;
+            color: var(--text-primary);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        /* Premium Toast Notifications */
+        #notificationContainer {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+        }
+
+        .notification {
+            pointer-events: auto;
+            width: 380px;
+            background: rgba(15, 15, 15, 0.85);
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            gap: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+            transform: translateX(120%);
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .notification.active {
+            transform: translateX(0);
+        }
+
+        .notification::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--accent-info);
+        }
+
+        .notification.error::before { background: var(--accent-danger); }
+        .notification.success::before { background: var(--accent-primary); }
+        .notification.warning::before { background: var(--accent-warning); }
+
+        .notification-icon {
+            flex-shrink: 0;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .notification.error .notification-icon { color: var(--accent-danger); background: rgba(255, 0, 85, 0.1); }
+        .notification.success .notification-icon { color: var(--accent-primary); background: rgba(0, 255, 136, 0.1); }
+
+        .notification-content {
+            flex: 1;
+        }
+
+        .notification-title {
+            font-weight: 700;
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .notification-message {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .notification-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 2px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .notification-progress-bar {
+            height: 100%;
+            width: 100%;
+            background: var(--accent-info);
+            transform-origin: left;
+        }
+
+        .notification.error .notification-progress-bar { background: var(--accent-danger); }
+        .notification.success .notification-progress-bar { background: var(--accent-primary); }
+
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-bar {
+                justify-content: center;
+            }
+
+            .log-container {
+                height: 500px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">🛡</div>
+                <div class="logo-text">
+                    <h1>SentinelLog</h1>
+                    <p>v2.0 · Real-time Threat Detection</p>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <div class="status-indicator">
+                    <div class="status-dot connected" id="statusDot"></div>
+                    <span id="statusText">Connected</span>
+                </div>
+
+                <div class="alert-badge">
+                    <svg width="16" height="16" fill="currentColor" style="color: var(--accent-danger);">
+                        <path d="M8 1L1 15h14L8 1zm0 4l4 8H4l4-8z"/>
+                    </svg>
+                    <span class="alert-count" id="alertCount">0</span>
+                    <span style="color: var(--text-secondary); font-size: 0.875rem;">Threats</span>
+                </div>
+
+                <div style="font-family: 'JetBrains Mono', monospace; color: var(--text-secondary); font-size: 0.875rem;" id="currentTime">--:--:--</div>
+
+                <button class="btn" onclick="exportLogs()">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" style="display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
+                        <path stroke-width="2" d="M4 12v1h8v-1M8 3v8m0 0l-3-3m3 3l3-3"/>
+                    </svg>
+                    Export
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-label">Events Per Second</div>
+                <div class="metric-value success" id="eps">0.0</div>
+                <div class="metric-footer">Real-time processing rate</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Active Threats</div>
+                <div class="metric-value danger" id="activeThreats">0</div>
+                <div class="metric-footer">Critical: <span id="criticalCount">0</span></div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">Blocked IPs</div>
+                <div class="metric-value warning" id="blockedIps">0</div>
+                <div class="metric-footer">Auto-blocked today</div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-label">System Uptime</div>
+                <div class="metric-value info" id="uptime">00:00:00</div>
+                <div class="metric-footer">Running since start</div>
+            </div>
+        </div>
+
+        <div class="filter-bar">
+            <span class="filter-label">FILTERS:</span>
+            <button class="filter-btn active" data-filter="all">ALL</button>
+            <button class="filter-btn" data-filter="critical">CRITICAL</button>
+            <button class="filter-btn" data-filter="ssh_brute">SSH BRUTE</button>
+            <button class="filter-btn" data-filter="sqli">SQL INJECTION</button>
+            <button class="filter-btn" data-filter="port_scan">PORT SCAN</button>
+            <button class="filter-btn" data-filter="priv_esc">PRIVILEGE ESC</button>
+            <button class="filter-btn" data-filter="ddos">DDoS</button>
+            <button class="btn btn-primary" onclick="clearLogs()" style="margin-left: auto;">Clear All</button>
+        </div>
+
+        <div class="main-grid">
+            <div class="log-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <span class="live-indicator"></span>
+                        Live Log Stream
+                    </div>
+                    <div class="log-count">Total: <span id="totalLogs">0</span></div>
+                </div>
+                <div class="log-container" id="logContainer">
+                    <!-- Logs will be inserted here -->
+                </div>
+            </div>
+
+            <div class="side-panel">
+                <div class="chart-card">
+                    <div class="chart-title">Threat Activity (Last 12 min)</div>
+                    <div class="chart-container" id="activityChart">
+                        <!-- Chart bars will be inserted here -->
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-title">Top Threat Sources</div>
+                    <div class="source-list" id="topSources">
+                        <!-- Top sources will be inserted here -->
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-title">Attack Type Distribution</div>
+                    <div id="attackTypes">
+                        <!-- Attack types will be inserted here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="detailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Threat Details</h2>
+                <button class="close-btn" onclick="closeModal()">×</button>
+            </div>
+            <div class="detail-grid" id="modalContent">
+                <!-- Modal content will be inserted here -->
+            </div>
+            <div class="modal-actions">
+                <button class="btn" style="background: var(--accent-danger); color: #fff; flex: 1;" onclick="blockIpFromModal()">Block IP</button>
+                <button class="btn" style="flex: 1;" onclick="whitelistIp()">Whitelist</button>
+                <button class="btn" onclick="closeModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="notificationContainer"></div>
+
+    <script>
+        let ws = null;
+        let logs = [];
+        let stats = { eps: 0, activeThreats: 0, blockedIps: 0, criticalCount: 0 };
+        let startTime = Date.now();
+        let currentFilter = 'all';
+        let selectedLog = null;
+        let reconnectAttempts = 0;
+        let activityData = new Array(24).fill(0);
+        let topSourcesMap = new Map();
+        let attackTypesMap = new Map();
+
+        function connectWebSocket() {
+            const wsUrl = `ws://${window.location.hostname}:${window.location.port || 8001}/ws/logs`;
+            
+            try {
+                ws = new WebSocket(wsUrl);
+                
+                ws.onopen = () => {
+                    console.log('✅ WebSocket connected');
+                    updateConnectionStatus(true);
+                    reconnectAttempts = 0;
+                    fetchInitialData();
+                };
+                
+                ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    
+                    if (data.event === 'new_log') {
+                        addLog(data.data);
+                    } else if (data.event === 'threat_alert') {
+                        handleThreatAlert(data.threat, data.action);
+                    } else if (data.event === 'stats_update') {
+                        updateStats(data.stats);
+                    }
+                };
+                
+                ws.onerror = () => {
+                    console.error('❌ WebSocket error');
+                    updateConnectionStatus(false);
+                };
+                
+                ws.onclose = () => {
+                    console.log('🔌 WebSocket disconnected');
+                    updateConnectionStatus(false);
+                    attemptReconnect();
+                };
+                
+            } catch (error) {
+                console.error('Failed to connect WebSocket:', error);
+                updateConnectionStatus(false);
+                attemptReconnect();
+            }
+        }
+
+        function attemptReconnect() {
+            if (reconnectAttempts < 5) {
+                reconnectAttempts++;
+                const delay = Math.min(3000 * Math.pow(2, reconnectAttempts - 1), 30000);
+                console.log(`🔄 Reconnecting in ${delay/1000}s...`);
+                setTimeout(connectWebSocket, delay);
+            } else {
+                startDemoMode();
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            if (connected) {
+                dot.className = 'status-dot connected';
+                text.textContent = 'Connected';
+            } else {
+                dot.className = 'status-dot disconnected';
+                text.textContent = 'Disconnected';
+            }
+        }
+
+        async function fetchInitialData() {
+            try {
+                const response = await fetch(`http://${window.location.hostname}:${window.location.port || 8001}/api/logs`);
+                if (response.ok) {
+                    const data = await response.json();
+                    data.forEach(log => addLog(log, false));
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                startDemoMode();
+            }
+        }
+
+        function startDemoMode() {
+            console.log('🎮 Starting demo mode...');
+            setInterval(() => {
+                addLog(generateDemoLog());
+            }, Math.random() * 1500 + 1000);
+
+            setInterval(() => {
+                stats.eps = (Math.random() * 50 + 10).toFixed(1);
+                updateMetricCards();
+            }, 2000);
+        }
+
+        function generateDemoLog() {
+            const types = ['ssh_brute', 'sqli', 'port_scan', 'priv_esc', 'ddos', 'normal'];
+            const ips = ['218.92.0.115', '103.45.12.88', '192.168.1.100', '45.142.212.61', '185.220.101.5', '94.102.49.190'];
+            const countries = ['CN', 'RU', 'US', 'BR', 'IN', 'UA'];
+            
+            const type = types[Math.floor(Math.random() * types.length)];
+            const severity = type === 'normal' ? 'info' : (Math.random() > 0.7 ? 'critical' : 'warning');
+            const ip = ips[Math.floor(Math.random() * ips.length)];
+            
+            const messages = {
+                ssh_brute: `Failed SSH authentication from ${ip} (${Math.floor(Math.random() * 50 + 1)} attempts)`,
+                sqli: `SQL Injection pattern detected: UNION SELECT * FROM users WHERE '1'='1'`,
+                port_scan: `Port scan detected from ${ip}: ${Math.floor(Math.random() * 500 + 100)} ports/min`,
+                priv_esc: `Privilege escalation attempt: unauthorized sudo execution`,
+                ddos: `DDoS attack detected: ${Math.floor(Math.random() * 1000 + 500)} req/sec from ${ip}`,
+                normal: `Normal authentication successful from ${ip}`
+            };
+            
+            return {
+                id: Date.now() + Math.random(),
+                timestamp: new Date().toISOString(),
+                ip: ip,
+                type: type,
+                severity: severity,
+                message: messages[type],
+                detail: `Complete log trace for ${type} event`,
+                score: type === 'normal' ? Math.floor(Math.random() * 30) : Math.floor(Math.random() * 40 + 60),
+                country: countries[Math.floor(Math.random() * countries.length)],
+                blocked: severity === 'critical' && Math.random() > 0.5
+            };
+        }
+
+        function addLog(log, animate = true) {
+            logs.unshift(log);
+            if (logs.length > 200) logs.pop();
+            
+            if (log.severity === 'critical') {
+                stats.criticalCount++;
+                stats.activeThreats++;
+            }
+            
+            if (log.blocked) stats.blockedIps++;
+            
+            activityData.shift();
+            activityData.push(log.score || 0);
+            
+            if (log.severity !== 'info') {
+                topSourcesMap.set(log.ip, (topSourcesMap.get(log.ip) || 0) + 1);
+            }
+            
+            if (log.type !== 'normal') {
+                attackTypesMap.set(log.type, (attackTypesMap.get(log.type) || 0) + 1);
+            }
+            
+            updateMetricCards();
+            updateLogDisplay();
+            updateCharts();
+            document.getElementById('totalLogs').textContent = logs.length;
+        }
+
+        function updateLogDisplay() {
+            const container = document.getElementById('logContainer');
+            const filteredLogs = logs.filter(log => {
+                if (currentFilter === 'all') return true;
+                if (currentFilter === 'critical') return log.severity === 'critical';
+                return log.type === currentFilter;
+            });
+            
+            container.innerHTML = filteredLogs.map(createLogHTML).join('');
+        }
+
+        function createLogHTML(log) {
+            const time = new Date(log.timestamp).toLocaleTimeString();
+            const typeLabel = log.type.toUpperCase().replace('_', ' ');
+            
+            return `
+                <div class="log-entry ${log.severity}" onclick='showLogDetail(${JSON.stringify(log).replace(/'/g, "&apos;")})'>
+                    <div class="log-header">
+                        <span class="log-time">${time}</span>
+                        <span class="ip-badge" onclick="event.stopPropagation(); blockIp('${log.ip}')">${log.ip}</span>
+                        <span class="badge badge-${log.severity}">${typeLabel}</span>
+                        ${log.country ? `<span style="font-size: 0.75rem;">🌍 ${log.country}</span>` : ''}
+                        ${log.blocked ? '<span style="color: var(--accent-danger); font-size: 0.75rem; font-weight: 700;">🚫 BLOCKED</span>' : ''}
+                    </div>
+                    <div class="log-message">${log.message}</div>
+                    <div class="log-footer">
+                        <div></div>
+                        <div style="text-align: right;">
+                            <div class="threat-score" style="color: ${log.score >= 80 ? 'var(--accent-danger)' : log.score >= 50 ? 'var(--accent-warning)' : 'var(--accent-primary)'}">${log.score}</div>
+                            <div class="score-label">Threat Score</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateMetricCards() {
+            document.getElementById('eps').textContent = stats.eps || '0.0';
+            document.getElementById('activeThreats').textContent = stats.activeThreats || '0';
+            document.getElementById('blockedIps').textContent = stats.blockedIps || '0';
+            document.getElementById('criticalCount').textContent = stats.criticalCount || '0';
+            document.getElementById('alertCount').textContent = stats.criticalCount || '0';
+            
+            const uptime = Date.now() - startTime;
+            const hours = Math.floor(uptime / 3600000);
+            const minutes = Math.floor((uptime % 3600000) / 60000);
+            const seconds = Math.floor((uptime % 60000) / 1000);
+            document.getElementById('uptime').textContent = 
+                `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function updateStats(newStats) {
+            stats = { ...stats, ...newStats };
+            updateMetricCards();
+        }
+
+        function updateCharts() {
+            const chartContainer = document.getElementById('activityChart');
+            const maxValue = Math.max(...activityData, 1);
+            
+            chartContainer.innerHTML = activityData.map(value => {
+                const height = (value / maxValue) * 100;
+                return `<div class="chart-bar" style="height: ${height}%"></div>`;
+            }).join('');
+            
+            const topSourcesEl = document.getElementById('topSources');
+            const topSources = Array.from(topSourcesMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5);
+            
+            topSourcesEl.innerHTML = topSources.length > 0 ? topSources.map(([ip, count]) => `
+                <div class="source-item">
+                    <span class="ip-badge" onclick="blockIp('${ip}')">${ip}</span>
+                    <span style="font-weight: 700; color: var(--accent-danger);">${count}</span>
+                </div>
+            `).join('') : '<div style="color: var(--text-tertiary); text-align: center; padding: 1rem;">No threats detected</div>';
+            
+            const attackTypesEl = document.getElementById('attackTypes');
+            const attackTypes = Array.from(attackTypesMap.entries()).sort((a, b) => b[1] - a[1]);
+            const totalAttacks = attackTypes.reduce((sum, [, count]) => sum + count, 0);
+            
+            attackTypesEl.innerHTML = attackTypes.length > 0 ? attackTypes.map(([type, count]) => {
+                const percentage = (count / totalAttacks * 100).toFixed(1);
+                return `
+                    <div class="attack-stat">
+                        <div class="attack-header">
+                            <span class="attack-name">${type.toUpperCase().replace('_', ' ')}</span>
+                            <span class="attack-count">${count}</span>
+                        </div>
+                        <div class="attack-bar">
+                            <div class="attack-bar-fill" style="width: ${percentage}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('') : '<div style="color: var(--text-tertiary); text-align: center;">No attacks detected</div>';
+        }
+
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                currentFilter = e.target.dataset.filter;
+                updateLogDisplay();
+            });
+        });
+
+        function showLogDetail(log) {
+            selectedLog = log;
+            const modal = document.getElementById('detailModal');
+            const content = document.getElementById('modalContent');
+            
+            content.innerHTML = `
+                <div class="detail-item">
+                    <div class="detail-label">Timestamp</div>
+                    <div class="detail-value">${new Date(log.timestamp).toLocaleString()}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Source IP Address</div>
+                    <div class="detail-value"><span class="ip-badge">${log.ip}</span> ${log.country ? `🌍 ${log.country}` : ''}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Threat Type</div>
+                    <div class="detail-value"><span class="badge badge-${log.severity}">${log.type.toUpperCase().replace('_', ' ')}</span></div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Severity Level</div>
+                    <div class="detail-value"><span class="badge badge-${log.severity}">${log.severity.toUpperCase()}</span></div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Threat Score</div>
+                    <div class="detail-value" style="font-size: 1.5rem; font-weight: 700; color: ${log.score >= 80 ? 'var(--accent-danger)' : log.score >= 50 ? 'var(--accent-warning)' : 'var(--accent-primary)'}">${log.score}/100</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Log Message</div>
+                    <div class="detail-value">${log.message}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Additional Details</div>
+                    <div class="detail-value">${log.detail || 'No additional details available'}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Status</div>
+                    <div class="detail-value">${log.blocked ? '<span style="color: var(--accent-danger);">🚫 BLOCKED</span>' : '<span style="color: var(--accent-warning);">⚠️ MONITORING</span>'}</div>
+                </div>
+            `;
+            
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').classList.remove('active');
+            selectedLog = null;
+        }
+
+        function blockIpFromModal() {
+            if (selectedLog) {
+                blockIp(selectedLog.ip);
+                closeModal();
+            }
+        }
+
+        async function blockIp(ip) {
+            try {
+                const response = await fetch(`http://${window.location.hostname}:${window.location.port || 8001}/api/block/${ip}`, { method: 'POST' });
+                if (response.ok) {
+                    showNotification(`IP ${ip} has been blocked`, 'success');
+                    stats.blockedIps++;
+                    updateMetricCards();
+                }
+            } catch (error) {
+                showNotification(`IP ${ip} blocked (demo mode)`, 'success');
+                stats.blockedIps++;
+                updateMetricCards();
+            }
+        }
+
+        function whitelistIp() {
+            if (selectedLog) {
+                showNotification(`IP ${selectedLog.ip} has been whitelisted`, 'success');
+                closeModal();
+            }
+        }
+
+        function handleThreatAlert(threat, action) {
+            showNotification(`${threat.type.toUpperCase()} detected from ${threat.ip}! Action: ${action}`, 'error');
+            stats.activeThreats++;
+            if (action === 'auto_blocked') stats.blockedIps++;
+            updateMetricCards();
+        }
+
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notificationContainer');
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            
+            const icon = type === 'error' ? '🚨' : type === 'success' ? '✅' : 'ℹ️';
+            const title = type === 'error' ? 'Threat Detected' : type === 'success' ? 'System Action' : 'Information';
+            
+            notification.innerHTML = `
+                <div class="notification-icon">${icon}</div>
+                <div class="notification-content">
+                    <div class="notification-title">${title}</div>
+                    <div class="notification-message">${message}</div>
+                </div>
+                <div class="notification-progress">
+                    <div class="notification-progress-bar"></div>
+                </div>
+            `;
+            
+            container.appendChild(notification);
+            
+            // Trigger animation
+            setTimeout(() => notification.classList.add('active'), 10);
+            
+            // Progress bar animation
+            const progressBar = notification.querySelector('.notification-progress-bar');
+            progressBar.animate([
+                { transform: 'scaleX(1)' },
+                { transform: 'scaleX(0)' }
+            ], {
+                duration: 5000,
+                easing: 'linear'
+            });
+            
+            // Remove after 5s
+            setTimeout(() => {
+                notification.classList.remove('active');
+                setTimeout(() => notification.remove(), 500);
+            }, 5000);
+        }
+
+        function exportLogs() {
+            const dataStr = JSON.stringify(logs, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `sentinellog-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showNotification(`Exported ${logs.length} logs`, 'success');
+        }
+
+        function clearLogs() {
+            if (confirm('Clear all logs?')) {
+                logs = [];
+                topSourcesMap.clear();
+                attackTypesMap.clear();
+                stats.criticalCount = 0;
+                stats.activeThreats = 0;
+                updateLogDisplay();
+                updateCharts();
+                updateMetricCards();
+                document.getElementById('totalLogs').textContent = '0';
+                showNotification('All logs cleared', 'success');
+            }
+        }
+
+        function updateClock() {
+            document.getElementById('currentTime').textContent = new Date().toLocaleTimeString();
+        }
+
+        setInterval(updateClock, 1000);
+        setInterval(updateMetricCards, 1000);
+        updateClock();
+        updateCharts();
+        connectWebSocket();
+    </script>
+</body>
+</html>
