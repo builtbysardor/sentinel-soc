@@ -29,6 +29,8 @@
 
 </div>
 
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-Visit_Site-00C7B7?style=for-the-badge)](https://sentinel-soc-tau.vercel.app)
+
 ---
 
 ## 📸 Dashboard Preview
